@@ -33,8 +33,6 @@ export default function Analytics() {
     fetchData()
   }, [])
 
-  const availableCount = gifts.filter((g) => g.status === 'available').length
-  const purchasedCount = gifts.filter((g) => g.status === 'purchased').length
   const totalRevenue = purchases
     .filter((p) => p.payment_status === 'approved')
     .reduce((sum, p) => sum + p.amount, 0)
@@ -61,22 +59,12 @@ export default function Analytics() {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Analytics</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-6">
           <p className="text-sm text-muted-foreground mb-1">Presentes</p>
           <p className="text-3xl font-bold">{gifts.length}</p>
-          <p className="text-xs text-green-600 mt-2">
-            {availableCount} disponíveis
-          </p>
-        </Card>
-
-        <Card className="p-6">
-          <p className="text-sm text-muted-foreground mb-1">
-            Já Presenteados
-          </p>
-          <p className="text-3xl font-bold">{purchasedCount}</p>
-          <p className="text-xs text-primary mt-2">
-            {Math.round((purchasedCount / gifts.length) * 100) || 0}%
+          <p className="text-xs text-muted-foreground mt-2">
+            Total de presentes
           </p>
         </Card>
 

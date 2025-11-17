@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 
 interface MercadoPagoPreference {
   items: Array<{
+    id?: string
     title: string
     description: string
     unit_price: number
@@ -16,7 +17,7 @@ interface MercadoPagoPreference {
     failure: string
     pending: string
   }
-  auto_return: string
+  auto_return: 'approved' | 'all'
   notification_url: string
   external_reference: string
 }
@@ -61,10 +62,14 @@ export async function POST(request: Request) {
 
     const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
 
+    // Detect if using test credentials (sandbox)
+    const isTestMode = config.mercadopago_access_token?.startsWith('TEST-')
+
     // Create preference object
     const preference: MercadoPagoPreference = {
       items: [
         {
+          id: gift.id,
           title: gift.name,
           description: gift.description || '',
           unit_price: parseFloat(gift.price.toString()),
@@ -80,7 +85,7 @@ export async function POST(request: Request) {
         failure: `${baseUrl}/payment/failure?purchase_id=${purchaseId}`,
         pending: `${baseUrl}/payment/pending?purchase_id=${purchaseId}`,
       },
-      auto_return: 'approved',
+      auto_return: 'all', // Retorna automaticamente para todas as situações
       notification_url: `${baseUrl}/api/payments/webhook`,
       external_reference: purchaseId,
     }
@@ -111,9 +116,15 @@ export async function POST(request: Request) {
     const data = await response.json()
     console.log('[v0] MercadoPago preference created:', data.id)
 
+    // Use sandbox_init_point for test mode, init_point for production
+    const checkoutUrl = isTestMode && data.sandbox_init_point 
+      ? data.sandbox_init_point 
+      : data.init_point
+
     return Response.json({
-      init_point: data.init_point,
+      init_point: checkoutUrl,
       preference_id: data.id,
+      is_test_mode: isTestMode,
     })
   } catch (error) {
     console.error('[v0] Create preference error:', error)

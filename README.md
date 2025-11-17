@@ -1,30 +1,76 @@
-# Wedding registry website
+# Wedding Registry Website
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+Sistema completo de lista de presentes para casamento com integração ao MercadoPago.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/jefferson-aparecido-9188s-projects/v0-wedding-registry-website)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/oQZoIR0dsxq)
+## 🚀 Início Rápido
 
-## Overview
+Para rodar o projeto localmente, consulte o guia completo: **[SETUP_LOCAL.md](./SETUP_LOCAL.md)**
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+### Resumo Rápido:
 
-## Deployment
+1. **Instale as dependências:**
+   ```bash
+   pnpm install
+   ```
 
-Your project is live at:
+2. **Configure as variáveis de ambiente:**
+   - Copie `.env.example` para `.env.local`
+   - Preencha com suas credenciais do Supabase
 
-**[https://vercel.com/jefferson-aparecido-9188s-projects/v0-wedding-registry-website](https://vercel.com/jefferson-aparecido-9188s-projects/v0-wedding-registry-website)**
+3. **Configure o banco de dados:**
+   - Execute os scripts SQL no Supabase (veja `scripts/`)
 
-## Build your app
+4. **Rode o projeto:**
+   ```bash
+   pnpm dev
+   ```
 
-Continue building your app on:
+## 📋 Funcionalidades
 
-**[https://v0.app/chat/oQZoIR0dsxq](https://v0.app/chat/oQZoIR0dsxq)**
+- ✅ Lista de presentes com múltiplas compras permitidas
+- ✅ Upload de imagens para presentes
+- ✅ Integração com MercadoPago para pagamentos
+- ✅ Dashboard administrativo completo
+- ✅ Galeria de fotos na página principal
+- ✅ Sistema de autenticação para convidados (OTP)
+- ✅ Rastreamento de compras e status de pagamento
 
-## How It Works
+## 📁 Estrutura do Projeto
 
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+```
+├── app/                    # Rotas Next.js (App Router)
+│   ├── api/               # API Routes
+│   ├── admin/             # Páginas administrativas
+│   ├── gifts/             # Página de presentes
+│   └── page.tsx           # Página principal
+├── components/            # Componentes React
+│   ├── admin/             # Componentes do admin
+│   ├── gifts/             # Componentes de presentes
+│   └── ui/                # Componentes UI reutilizáveis
+├── lib/                   # Utilitários e configurações
+│   ├── supabase/         # Cliente Supabase
+│   └── types/             # Tipos TypeScript
+└── scripts/              # Scripts SQL e utilitários
+```
+
+## 🔧 Tecnologias
+
+- **Next.js 16** - Framework React
+- **Supabase** - Banco de dados e autenticação
+- **TypeScript** - Tipagem estática
+- **Tailwind CSS** - Estilização
+- **MercadoPago** - Gateway de pagamento
+- **Radix UI** - Componentes acessíveis
+
+## 📚 Documentação Adicional
+
+- [Guia de Setup Local](./SETUP_LOCAL.md) - Instruções detalhadas
+- [Integração de Pagamento](./PAYMENT_INTEGRATION.md) - Documentação do MercadoPago
+
+## 🐛 Solução de Problemas
+
+Consulte a seção "Solução de Problemas" no [SETUP_LOCAL.md](./SETUP_LOCAL.md)
+
+---
+
+*Projeto desenvolvido com [v0.app](https://v0.app)*

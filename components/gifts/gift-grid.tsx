@@ -30,11 +30,6 @@ export default function GiftGrid({ gifts, onPurchaseClick }: GiftGridProps) {
               fill
               className="object-cover"
             />
-            <div className="absolute top-2 right-2">
-              <Badge variant={gift.status === 'available' ? 'default' : 'secondary'}>
-                {gift.status === 'available' ? 'Disponível' : 'Já Presenteado'}
-              </Badge>
-            </div>
           </div>
 
           <div className="flex-1 p-4 flex flex-col">
@@ -50,10 +45,9 @@ export default function GiftGrid({ gifts, onPurchaseClick }: GiftGridProps) {
 
               <Button
                 onClick={() => onPurchaseClick(gift)}
-                disabled={gift.status !== 'available'}
                 className="w-full"
               >
-                {gift.status === 'available' ? 'Presentear' : 'Não Disponível'}
+                Presentear
               </Button>
             </div>
           </div>

@@ -35,7 +35,7 @@ export default function Navigation() {
           <Link href="/gifts" className="hover:text-primary transition">
             Presentes
           </Link>
-          <Link href="/guest">
+          <Link href="/guest/purchases">
             <Button variant="outline" size="sm">
               Meus Presentes
             </Button>
@@ -64,7 +64,7 @@ export default function Navigation() {
             <Link href="/gifts" className="block hover:text-primary transition">
               Presentes
             </Link>
-            <Link href="/guest">
+            <Link href="/guest/purchases">
               <Button variant="outline" size="sm" className="w-full">
                 Meus Presentes
               </Button>

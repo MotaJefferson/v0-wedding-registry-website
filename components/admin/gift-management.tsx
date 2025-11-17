@@ -36,6 +36,7 @@ export default function GiftManagement() {
     price: '',
     image_url: '',
   })
+  const [uploading, setUploading] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -121,6 +122,8 @@ export default function GiftManagement() {
         description: 'Presente deletado',
       })
 
+      // Remove from local state immediately
+      setGifts(gifts.filter(g => g.id !== id))
       fetchGifts()
     } catch (error) {
       toast({
@@ -179,7 +182,6 @@ export default function GiftManagement() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Preço</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -188,17 +190,6 @@ export default function GiftManagement() {
                 <TableRow key={gift.id}>
                   <TableCell className="font-medium">{gift.name}</TableCell>
                   <TableCell>{formatPrice(gift.price)}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        gift.status === 'available'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {gift.status === 'available' ? 'Disponível' : 'Presenteado'}
-                    </span>
-                  </TableCell>
                   <TableCell className="flex gap-2">
                     <Button
                       size="sm"
@@ -233,6 +224,9 @@ export default function GiftManagement() {
             <DialogTitle>
               {editingGift ? 'Editar Presente' : 'Novo Presente'}
             </DialogTitle>
+            <DialogDescription>
+              {editingGift ? 'Atualize as informações do presente' : 'Preencha os dados do novo presente'}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -279,7 +273,60 @@ export default function GiftManagement() {
                 onChange={(e) =>
                   setFormData({ ...formData, image_url: e.target.value })
                 }
+                placeholder="URL da imagem ou faça upload"
               />
+            </div>
+
+            <div>
+              <Label htmlFor="image_upload">Ou fazer upload de imagem</Label>
+              <Input
+                id="image_upload"
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+
+                  setUploading(true)
+                  try {
+                    const uploadFormData = new FormData()
+                    uploadFormData.append('file', file)
+
+                    const response = await fetch('/api/upload', {
+                      method: 'POST',
+                      body: uploadFormData,
+                    })
+
+                    if (!response.ok) {
+                      const errorData = await response.json().catch(() => ({}))
+                      throw new Error(errorData.message || errorData.error || 'Upload failed')
+                    }
+
+                    const data = await response.json()
+                    setFormData({ ...formData, image_url: data.url })
+                    toast({
+                      title: 'Sucesso',
+                      description: 'Imagem enviada com sucesso',
+                    })
+                  } catch (error: any) {
+                    console.error('[v0] Upload error:', error)
+                    const errorMessage = error?.message || 'Erro ao fazer upload da imagem'
+                    toast({
+                      title: 'Erro',
+                      description: errorMessage,
+                      variant: 'destructive',
+                    })
+                  } finally {
+                    setUploading(false)
+                  }
+                }}
+                disabled={uploading}
+              />
+              {uploading && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Enviando imagem...
+                </p>
+              )}
             </div>
 
             <div className="flex gap-2 justify-end">

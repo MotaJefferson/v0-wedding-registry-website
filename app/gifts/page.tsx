@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
+import Navigation from '@/components/navigation'
 import GiftGrid from '@/components/gifts/gift-grid'
 import GiftFilters from '@/components/gifts/gift-filters'
 import PurchaseModal from '@/components/gifts/purchase-modal'
@@ -11,7 +12,6 @@ export default function GiftsPage() {
   const [gifts, setGifts] = useState<Gift[]>([])
   const [filteredGifts, setFilteredGifts] = useState<Gift[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'available' | 'purchased'>('all')
   const [search, setSearch] = useState('')
   const [selectedGift, setSelectedGift] = useState<Gift | null>(null)
   const [showModal, setShowModal] = useState(false)
@@ -35,10 +35,6 @@ export default function GiftsPage() {
   useEffect(() => {
     let filtered = gifts
 
-    if (filter !== 'all') {
-      filtered = filtered.filter(g => g.status === filter)
-    }
-
     if (search) {
       filtered = filtered.filter(g =>
         g.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -47,25 +43,16 @@ export default function GiftsPage() {
     }
 
     setFilteredGifts(filtered)
-  }, [gifts, filter, search])
+  }, [gifts, search])
 
   const handlePurchaseClick = (gift: Gift) => {
-    if (gift.status === 'available') {
-      setSelectedGift(gift)
-      setShowModal(true)
-    }
+    setSelectedGift(gift)
+    setShowModal(true)
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <a href="/" className="font-bold text-xl hover:text-primary transition">
-            💕 Casamento
-          </a>
-        </div>
-      </nav>
+      <Navigation />
 
       <main className="max-w-6xl mx-auto px-4 py-12">
         <div className="mb-12">
@@ -76,8 +63,6 @@ export default function GiftsPage() {
         </div>
 
         <GiftFilters
-          filter={filter}
-          onFilterChange={setFilter}
           search={search}
           onSearchChange={setSearch}
         />
@@ -109,9 +94,6 @@ export default function GiftsPage() {
           onOpenChange={setShowModal}
           onSuccess={() => {
             setShowModal(false)
-            setGifts(gifts.map(g => 
-              g.id === selectedGift.id ? { ...g, status: 'purchased' } : g
-            ))
           }}
         />
       )}

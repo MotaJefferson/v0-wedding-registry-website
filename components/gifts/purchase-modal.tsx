@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import type { Gift } from '@/lib/types/database'
@@ -30,8 +29,8 @@ export default function PurchaseModal({
   onOpenChange,
   onSuccess,
 }: PurchaseModalProps) {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [agreed, setAgreed] = useState(false)
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
@@ -45,10 +44,10 @@ export default function PurchaseModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!email || !agreed) {
+    if (!name || !email) {
       toast({
         title: 'Erro',
-        description: 'Preencha todos os campos',
+        description: 'Preencha todos os campos obrigatórios',
         variant: 'destructive',
       })
       return
@@ -63,6 +62,7 @@ export default function PurchaseModal({
         body: JSON.stringify({
           giftId: gift.id,
           guestEmail: email,
+          guestName: name,
         }),
       })
 
@@ -74,13 +74,12 @@ export default function PurchaseModal({
         throw new Error(data.message || 'Erro ao processar compra')
       }
 
-      if (!data.init_point) {
-        throw new Error(data.message || 'Falha ao gerar link de pagamento. O MercadoPago pode não estar configurado.')
+      if (!data.purchaseId) {
+        throw new Error(data.message || 'Falha ao criar compra')
       }
 
-      // Redirect to MercadoPago
-      console.log('[v0] Redirecting to MercadoPago:', data.init_point)
-      window.location.href = data.init_point
+      // Redirect to checkout page
+      window.location.href = `/checkout?purchaseId=${data.purchaseId}`
     } catch (error) {
       console.error('[v0] Purchase error:', error)
       toast({
@@ -125,8 +124,22 @@ export default function PurchaseModal({
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
+              <Label htmlFor="name" className="mb-2 block">
+                Nome Completo <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Seu nome completo"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
               <Label htmlFor="email" className="mb-2 block">
-                Email
+                Email <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="email"
@@ -138,21 +151,14 @@ export default function PurchaseModal({
               />
             </div>
 
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="agree"
-                checked={agreed}
-                onCheckedChange={(checked) => setAgreed(checked as boolean)}
-              />
-              <Label htmlFor="agree" className="text-sm cursor-pointer">
-                Concordo em compartilhar meu email com os noivos
-              </Label>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              * Campos obrigatórios. Seus dados serão compartilhados com os noivos.
+            </p>
 
             <Button
               type="submit"
               className="w-full"
-              disabled={loading || !email || !agreed}
+              disabled={loading || !email || !name}
             >
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Prosseguir para Pagamento

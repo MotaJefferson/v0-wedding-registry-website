@@ -6,7 +6,10 @@ export async function POST(request: Request) {
     const supabase = await createClient()
     const body = await request.json()
 
-    console.log('[v0] Webhook received:', body)
+    console.log('[v0] Webhook received:', JSON.stringify(body, null, 2))
+
+    // Always return 200/201 to acknowledge receipt
+    // MercadoPago will retry if we don't respond correctly
 
     // Handle different webhook types
     if (body.type === 'payment') {
@@ -43,40 +46,59 @@ export async function POST(request: Request) {
 
       const payment = await paymentResponse.json()
 
+      const externalReference = payment.external_reference
+
+      if (!externalReference) {
+        console.error('[v0] No external_reference in payment:', payment)
+        return Response.json({ received: true }, { status: 200 })
+      }
+
+      // Update purchase based on payment status
+      const statusMap: Record<string, 'approved' | 'pending' | 'rejected'> = {
+        'approved': 'approved',
+        'pending': 'pending',
+        'in_process': 'pending',
+        'rejected': 'rejected',
+        'cancelled': 'rejected',
+        'refunded': 'rejected',
+        'charged_back': 'rejected',
+      }
+
+      const purchaseStatus = statusMap[payment.status] || 'pending'
+
+      // Update purchase
+      const { data: purchase, error: purchaseError } = await supabase
+        .from('purchases')
+        .select('*')
+        .eq('id', externalReference)
+        .single()
+
+      if (purchaseError || !purchase) {
+        console.error('[v0] Purchase not found:', externalReference, purchaseError)
+        // Still return 200 to acknowledge webhook
+        return Response.json({ received: true }, { status: 200 })
+      }
+
+      // Update purchase status
+      const updateData: any = {
+        payment_id: paymentId.toString(),
+        payment_status: purchaseStatus,
+        updated_at: new Date().toISOString(),
+      }
+
+      const { error: updateError } = await supabase
+        .from('purchases')
+        .update(updateData)
+        .eq('id', externalReference)
+
+      if (updateError) {
+        console.error('[v0] Error updating purchase:', updateError)
+      } else {
+        console.log(`[v0] Payment ${payment.status} for purchase:`, externalReference)
+      }
+
+      // Send confirmation email only for approved payments
       if (payment.status === 'approved') {
-        const externalReference = payment.external_reference
-
-        // Update purchase
-        const { data: purchase, error: purchaseError } = await supabase
-          .from('purchases')
-          .select('*')
-          .eq('id', externalReference)
-          .single()
-
-        if (purchaseError || !purchase) {
-          throw new Error('Purchase not found')
-        }
-
-        // Update purchase status
-        await supabase
-          .from('purchases')
-          .update({
-            payment_id: paymentId.toString(),
-            payment_status: 'approved',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', externalReference)
-
-        // Update gift status
-        await supabase
-          .from('gifts')
-          .update({
-            status: 'purchased',
-            purchased_by: purchase.guest_email,
-            purchased_at: new Date().toISOString(),
-          })
-          .eq('id', purchase.gift_id)
-
         try {
           await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/email/send-purchase-confirmation`, {
             method: 'POST',
@@ -85,30 +107,21 @@ export async function POST(request: Request) {
           })
         } catch (emailError) {
           console.error('[v0] Failed to send confirmation email:', emailError)
+          // Don't fail the webhook if email fails
         }
-
-        console.log('[v0] Payment approved for purchase:', externalReference)
-      } else if (payment.status === 'rejected') {
-        const externalReference = payment.external_reference
-
-        await supabase
-          .from('purchases')
-          .update({
-            payment_status: 'rejected',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', externalReference)
-
-        console.log('[v0] Payment rejected for purchase:', externalReference)
       }
     }
 
-    return Response.json({ received: true })
+    // Always return 200/201 to acknowledge receipt
+    // MercadoPago will retry if we return error status
+    return Response.json({ received: true }, { status: 200 })
   } catch (error) {
     console.error('[v0] Webhook error:', error)
+    // Still return 200 to prevent MercadoPago from retrying
+    // Log the error for manual investigation
     return Response.json(
-      { message: 'Error processing webhook' },
-      { status: 500 }
+      { received: true, error: 'Error processing webhook' },
+      { status: 200 }
     )
   }
 }

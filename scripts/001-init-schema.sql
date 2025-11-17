@@ -93,14 +93,15 @@ ALTER TABLE site_config ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for gifts (public read, admin write)
 CREATE POLICY "Public can read gifts" ON gifts FOR SELECT USING (true);
-CREATE POLICY "Admins can create gifts" ON gifts FOR INSERT WITH CHECK (true);
-CREATE POLICY "Admins can update gifts" ON gifts FOR UPDATE USING (true);
-CREATE POLICY "Admins can delete gifts" ON gifts FOR DELETE USING (true);
+CREATE POLICY "Anyone can create gifts" ON gifts FOR INSERT WITH CHECK (true);
+CREATE POLICY "Anyone can update gifts" ON gifts FOR UPDATE USING (true);
+CREATE POLICY "Anyone can delete gifts" ON gifts FOR DELETE USING (true);
 
 -- RLS Policies for purchases (public can see all, admins can manage)
 CREATE POLICY "Anyone can create purchase" ON purchases FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public can read purchases" ON purchases FOR SELECT USING (true);
 CREATE POLICY "Admins can update purchases" ON purchases FOR UPDATE USING (true);
+CREATE POLICY "Admins can delete purchases" ON purchases FOR DELETE USING (true);
 
 -- RLS Policies for site_config (public read, admin write)
 CREATE POLICY "Public can read config" ON site_config FOR SELECT USING (true);

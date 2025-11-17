@@ -4,9 +4,6 @@ export interface Gift {
   description: string | null;
   price: number;
   image_url: string | null;
-  status: 'available' | 'purchased';
-  purchased_by: string | null;
-  purchased_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -15,6 +12,7 @@ export interface Purchase {
   id: string;
   gift_id: string;
   guest_email: string;
+  guest_name: string | null;
   amount: number;
   payment_id: string | null;
   payment_status: 'pending' | 'approved' | 'rejected';
@@ -39,6 +37,9 @@ export interface SiteConfig {
   venue_address: string | null;
   venue_latitude: number | null;
   venue_longitude: number | null;
+  ceremony_time: string | null;
+  reception_time: string | null;
+  dress_code: string | null;
   mercadopago_access_token: string | null;
   notification_email: string | null;
   smtp_host: string | null;
@@ -46,5 +47,9 @@ export interface SiteConfig {
   smtp_user: string | null;
   smtp_password: string | null;
   primary_color: string;
+  main_page_photos: string[] | null;
+  footer_email: string | null;
+  footer_phone: string | null;
+  footer_text: string | null;
   updated_at: string;
 }

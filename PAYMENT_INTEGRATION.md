@@ -49,9 +49,12 @@ Creates a MercadoPago payment preference with item details.
 \`\`\`json
 {
   "init_point": "https://www.mercadopago.com.br/checkout/...",
-  "preference_id": "mercadopago-preference-id"
+  "preference_id": "mercadopago-preference-id",
+  "is_test_mode": true
 }
 \`\`\`
+
+**Note:** When using test credentials (starting with `TEST-`), the system automatically uses `sandbox_init_point` for sandbox environment.
 
 ### POST /api/payments/webhook
 Webhook endpoint that receives payment notifications from MercadoPago.
@@ -66,11 +69,12 @@ Webhook endpoint that receives payment notifications from MercadoPago.
 }
 \`\`\`
 
-**Actions on Approval:**
-- Updates purchase payment_status to "approved"
-- Updates gift status to "purchased"
-- Sends purchase confirmation email to guest
-- Records purchased_by and purchased_at on gift
+**Actions on Payment Status:**
+- **approved**: Updates purchase payment_status to "approved", sends confirmation email
+- **pending/in_process**: Updates purchase payment_status to "pending"
+- **rejected/cancelled/refunded/charged_back**: Updates purchase payment_status to "rejected"
+
+**Important:** The webhook always returns HTTP 200/201 to acknowledge receipt. MercadoPago will retry if the endpoint doesn't respond correctly. The system handles multiple payment statuses and maps them appropriately.
 
 ## MercadoPago API Calls
 
@@ -101,7 +105,7 @@ Webhook endpoint that receives payment notifications from MercadoPago.
   },
   "notification_url": "https://yoursite.com/api/payments/webhook",
   "external_reference": "purchase-id",
-  "auto_return": "approved"
+  "auto_return": "all"
 }
 \`\`\`
 
@@ -130,12 +134,16 @@ pending (purchase created)
     ↓
 (Guest pays on MercadoPago)
     ↓
-approved (webhook received) → Email sent, gift marked purchased
-    OR
-rejected (webhook received) → Purchase marked as failed
-    OR
-pending (after 48 hours, auto-expires)
+Webhook received → Status mapped:
+    - approved → purchase_status = "approved" + email sent
+    - pending/in_process → purchase_status = "pending"
+    - rejected/cancelled/refunded/charged_back → purchase_status = "rejected"
 \`\`\`
+
+**Status Mapping:**
+- `approved` → `approved`
+- `pending`, `in_process` → `pending`
+- `rejected`, `cancelled`, `refunded`, `charged_back` → `rejected`
 
 ## Security Considerations
 
@@ -144,6 +152,15 @@ pending (after 48 hours, auto-expires)
 3. **Token Storage**: Access token stored in site_config table (admin-only access via RLS)
 4. **Return URLs**: Use purchase_id to track payment outcome
 5. **Email Validation**: All guest emails validated before purchase creation
+6. **Webhook Response**: Always returns HTTP 200/201 to prevent MercadoPago retries. Errors are logged but don't fail the webhook.
+
+## Test vs Production Mode
+
+The system automatically detects test mode by checking if the Access Token starts with `TEST-`:
+- **Test Mode**: Uses `sandbox_init_point` from MercadoPago response
+- **Production Mode**: Uses `init_point` from MercadoPago response
+
+This ensures proper environment handling without manual configuration.
 
 ## Testing
 

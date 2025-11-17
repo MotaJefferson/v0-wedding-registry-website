@@ -2,16 +2,21 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ChevronDown, MapPin, Gift, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Navigation from '@/components/navigation'
 import HeroSection from '@/components/home/hero-section'
+import CTASection from '@/components/home/cta-section'
 import WeddingDetails from '@/components/home/wedding-details'
 import LocationSection from '@/components/home/location-section'
+import PhotoGallery from '@/components/home/photo-gallery'
 import Footer from '@/components/footer'
+import type { SiteConfig } from '@/lib/types/database'
 
 export default function HomePage() {
   const [scrolled, setScrolled] = useState(false)
+  const [config, setConfig] = useState<SiteConfig | null>(null)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -21,41 +26,39 @@ export default function HomePage() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const scrollToGifts = () => {
-    const element = document.getElementById('gifts-section')
-    element?.scrollIntoView({ behavior: 'smooth' })
-  }
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch('/api/config')
+        const data = await response.json()
+        setConfig(data)
+      } catch (error) {
+        console.error('[v0] Error fetching config:', error)
+      }
+    }
+    fetchConfig()
+  }, [])
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navigation />
       <main>
         {/* Hero Section */}
-        <HeroSection onScrollToGifts={scrollToGifts} />
+        <HeroSection config={config} />
+
+        {/* CTA Section - Moved before Wedding Details */}
+        <CTASection />
 
         {/* Wedding Details Section */}
-        <WeddingDetails />
+        <WeddingDetails config={config} />
 
         {/* Location Section */}
-        <LocationSection />
+        <LocationSection config={config} />
 
-        {/* CTA Section */}
-        <section className="py-16 md:py-24 bg-card">
-          <div className="max-w-4xl mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6 text-balance">
-              Queremos compartilhar este momento com você
-            </h2>
-            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Convidamos você a fazer parte do nosso dia especial escolhendo um presente que nos ajude a começar nossa nova vida juntos.
-            </p>
-            <Link href="/gifts">
-              <Button size="lg" className="gap-2">
-                <Gift className="w-5 h-5" />
-                Ver Lista de Presentes
-              </Button>
-            </Link>
-          </div>
-        </section>
+        {/* Photo Gallery Section */}
+        {config?.main_page_photos && config.main_page_photos.length > 0 && (
+          <PhotoGallery photos={config.main_page_photos} />
+        )}
       </main>
 
       <Footer />

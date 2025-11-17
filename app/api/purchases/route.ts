@@ -26,7 +26,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
-    const { giftId, guestEmail } = await request.json()
+    const { giftId, guestEmail, guestName } = await request.json()
 
     console.log('[v0] POST /api/purchases - giftId:', giftId, 'email:', guestEmail)
 
@@ -58,23 +58,21 @@ export async function POST(request: Request) {
       throw new Error('Gift not found')
     }
 
-    // Check if gift is already purchased
-    if (gift.status === 'purchased') {
-      return Response.json(
-        { message: 'Gift already purchased' },
-        { status: 400 }
-      )
+    // Create purchase record
+    const purchaseData: any = {
+      gift_id: giftId,
+      guest_email: guestEmail,
+      amount: gift.price,
+      payment_status: 'pending',
+    }
+    
+    if (guestName) {
+      purchaseData.guest_name = guestName
     }
 
-    // Create purchase record
     const { data: purchase, error: purchaseError } = await supabase
       .from('purchases')
-      .insert({
-        gift_id: giftId,
-        guest_email: guestEmail,
-        amount: gift.price,
-        payment_status: 'pending',
-      })
+      .insert(purchaseData)
       .select()
       .single()
 
@@ -85,54 +83,9 @@ export async function POST(request: Request) {
 
     console.log('[v0] Purchase created:', purchase.id)
 
-    // Get config for MercadoPago token
-    const { data: config } = await supabase
-      .from('site_config')
-      .select('mercadopago_access_token')
-      .eq('id', 1)
-      .single()
-
-    console.log('[v0] Config fetched, has token:', !!config?.mercadopago_access_token)
-
-    if (!config?.mercadopago_access_token) {
-      console.error('[v0] MercadoPago token not configured')
-      return Response.json(
-        { message: 'MercadoPago not configured. Please configure it in the admin dashboard.' },
-        { status: 400 }
-      )
-    }
-
-    // Call create preference API
-    const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
-    console.log('[v0] Calling preference API with baseUrl:', baseUrl)
-    
-    const preferenceResponse = await fetch(
-      `${baseUrl}/api/payments/create-preference`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          purchaseId: purchase.id,
-          giftId,
-          email: guestEmail,
-        }),
-      }
-    )
-
-    console.log('[v0] Preference API response status:', preferenceResponse.status)
-
-    if (!preferenceResponse.ok) {
-      const error = await preferenceResponse.text()
-      console.error('[v0] Preference API error:', error)
-      throw new Error('Failed to create payment preference')
-    }
-
-    const preferenceData = await preferenceResponse.json()
-    console.log('[v0] Preference data:', preferenceData)
-
     return Response.json({
-      purchase_id: purchase.id,
-      init_point: preferenceData.init_point,
+      purchaseId: purchase.id,
+      success: true,
     })
   } catch (error) {
     console.error('[v0] POST /api/purchases error:', error)

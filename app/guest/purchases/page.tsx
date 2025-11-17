@@ -6,6 +6,15 @@ import { Loader2, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Table,
   TableBody,
@@ -15,6 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
+import Navigation from '@/components/navigation'
 import type { Purchase, Gift } from '@/lib/types/database'
 
 interface PurchaseWithGift extends Purchase {
@@ -24,16 +34,50 @@ interface PurchaseWithGift extends Purchase {
 export default function GuestPurchasesPage() {
   const [purchases, setPurchases] = useState<PurchaseWithGift[]>([])
   const [loading, setLoading] = useState(true)
+  const [showEmailModal, setShowEmailModal] = useState(true)
+  const [email, setEmail] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email) return
+
+    setSubmitting(true)
+    try {
+      const response = await fetch('/api/auth/guest/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao enviar código')
+      }
+
+      router.push(`/guest/login?email=${encodeURIComponent(email)}`)
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao processar email',
+        variant: 'destructive',
+      })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   useEffect(() => {
+    // First show the page, then check authentication
+    setLoading(false)
+    
     const fetchPurchases = async () => {
       try {
         const response = await fetch('/api/guest/purchases')
         if (!response.ok) {
           if (response.status === 401) {
-            router.push('/guest/login')
+            setShowEmailModal(true)
             return
           }
           throw new Error('Failed to fetch purchases')
@@ -41,20 +85,18 @@ export default function GuestPurchasesPage() {
 
         const data = await response.json()
         setPurchases(data)
+        setShowEmailModal(false)
       } catch (error) {
         console.error('[v0] Error fetching purchases:', error)
-        toast({
-          title: 'Erro',
-          description: 'Erro ao buscar seus presentes',
-          variant: 'destructive',
-        })
-      } finally {
-        setLoading(false)
+        setShowEmailModal(true)
       }
     }
 
-    fetchPurchases()
-  }, [router, toast])
+    // Small delay to ensure page renders first
+    setTimeout(() => {
+      fetchPurchases()
+    }, 100)
+  }, [])
 
   const handleLogout = async () => {
     try {
@@ -97,28 +139,56 @@ export default function GuestPurchasesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <Navigation />
+      
+      {/* Email Modal */}
+      <Dialog open={showEmailModal} onOpenChange={setShowEmailModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ver Meus Presentes</DialogTitle>
+            <DialogDescription>
+              Digite seu email para ver os presentes que você comprou
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Continuar
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Meus Presentes</h1>
             <p className="text-sm text-muted-foreground">Histórico de presentes que você deu</p>
           </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogout}
-            className="gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            Sair
-          </Button>
+          {purchases.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair
+            </Button>
+          )}
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
   Table,
@@ -11,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useToast } from '@/hooks/use-toast'
 import type { Purchase, Gift } from '@/lib/types/database'
 
 interface PurchaseWithGift extends Purchase {
@@ -20,6 +22,7 @@ interface PurchaseWithGift extends Purchase {
 export default function PurchaseTracking() {
   const [purchases, setPurchases] = useState<PurchaseWithGift[]>([])
   const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchPurchases()
@@ -67,6 +70,33 @@ export default function PurchaseTracking() {
     }
   }
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja deletar esta compra?')) return
+
+    try {
+      const response = await fetch(`/api/purchases/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) throw new Error('Failed to delete purchase')
+
+      toast({
+        title: 'Sucesso',
+        description: 'Compra deletada',
+      })
+
+      // Remove from local state immediately
+      setPurchases(purchases.filter(p => p.id !== id))
+      fetchPurchases()
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao deletar compra',
+        variant: 'destructive',
+      })
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -87,6 +117,7 @@ export default function PurchaseTracking() {
                 <TableHead>Valor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Data</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -111,6 +142,19 @@ export default function PurchaseTracking() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDate(purchase.created_at)}
+                  </TableCell>
+                  <TableCell>
+                    {purchase.payment_status === 'pending' && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDelete(purchase.id)}
+                        className="gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Deletar
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
