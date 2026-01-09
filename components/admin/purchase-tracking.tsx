@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Trash2 } from 'lucide-react'
+import { Loader2, Trash2, RefreshCw } from 'lucide-react' // Adicionado RefreshCw
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -22,6 +22,7 @@ interface PurchaseWithGift extends Purchase {
 export default function PurchaseTracking() {
   const [purchases, setPurchases] = useState<PurchaseWithGift[]>([])
   const [loading, setLoading] = useState(true)
+  const [checkingId, setCheckingId] = useState<string | null>(null) // Estado para loading do botão específico
   const { toast } = useToast()
 
   useEffect(() => {
@@ -70,6 +71,50 @@ export default function PurchaseTracking() {
     }
   }
 
+  // NOVA FUNÇÃO: Checar Status
+  const handleCheckStatus = async (purchase: PurchaseWithGift) => {
+    if (!purchase.payment_id) {
+      toast({
+        title: 'Indisponível',
+        description: 'Esta compra não iniciou checkout no MercadoPago.',
+        variant: "destructive"
+      })
+      return
+    }
+
+    setCheckingId(purchase.id)
+
+    try {
+      const response = await fetch('/api/payments/check-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ purchaseId: purchase.id }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) throw new Error(data.message)
+
+      toast({
+        title: 'Status Atualizado',
+        description: `Status: ${data.status === 'approved' ? 'Aprovado' : data.status}`,
+        variant: data.status === 'approved' ? 'default' : 'destructive' // Verde se aprovado
+      })
+
+      // Atualiza a lista localmente para refletir a mudança
+      fetchPurchases()
+
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Falha ao verificar status',
+        variant: 'destructive',
+      })
+    } finally {
+      setCheckingId(null)
+    }
+  }
+
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja deletar esta compra?')) return
 
@@ -87,7 +132,6 @@ export default function PurchaseTracking() {
 
       // Remove from local state immediately
       setPurchases(purchases.filter(p => p.id !== id))
-      fetchPurchases()
     } catch (error) {
       toast({
         title: 'Erro',
@@ -115,6 +159,7 @@ export default function PurchaseTracking() {
               <TableRow>
                 <TableHead>Email</TableHead>
                 <TableHead>Valor</TableHead>
+                <TableHead>MP ID</TableHead> {/* Coluna nova opcional para ver ID do pagamento */}
                 <TableHead>Status</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Ações</TableHead>
@@ -127,6 +172,9 @@ export default function PurchaseTracking() {
                     {purchase.guest_email}
                   </TableCell>
                   <TableCell>{formatPrice(purchase.amount)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground font-mono">
+                     {purchase.payment_id || '-'}
+                  </TableCell>
                   <TableCell>
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(
@@ -144,17 +192,32 @@ export default function PurchaseTracking() {
                     {formatDate(purchase.created_at)}
                   </TableCell>
                   <TableCell>
-                    {purchase.payment_status === 'pending' && (
+                    <div className="flex items-center gap-2">
+                      {/* BOTÃO DE ATUALIZAR STATUS */}
                       <Button
                         size="sm"
-                        variant="destructive"
-                        onClick={() => handleDelete(purchase.id)}
-                        className="gap-1"
+                        variant="outline"
+                        onClick={() => handleCheckStatus(purchase)}
+                        disabled={checkingId === purchase.id || !purchase.payment_id}
+                        title="Verificar status no MercadoPago"
                       >
-                        <Trash2 className="w-3 h-3" />
-                        Deletar
+                        {checkingId === purchase.id ? (
+                           <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                           <RefreshCw className="w-3 h-3" />
+                        )}
                       </Button>
-                    )}
+
+                      {purchase.payment_status === 'pending' && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDelete(purchase.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
